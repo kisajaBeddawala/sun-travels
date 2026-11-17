@@ -1,0 +1,68 @@
+<a class="back-link" routerLink="/contracts">← Hotel contracts</a>
+<header class="page-heading"><h1>New contract</h1><p>Enter the agreement dates, markup and contracted room types.</p></header>
+
+@if (hotelError()) {
+  <p class="notice error" role="alert">{{ hotelError() }}</p>
+  @if (!showHotelForm()) { <button type="button" class="button secondary" (click)="loadHotels()">Reload hotels</button> }
+}
+
+@if (showHotelForm()) {
+  <form class="panel inset" [formGroup]="hotelForm" (ngSubmit)="addHotel()" novalidate aria-label="Add a hotel">
+    <h2>Add a hotel</h2>
+    <div class="form-grid hotel-fields">
+      <label>Hotel name <input formControlName="name" required maxlength="150"></label>
+      <label>City <input formControlName="city" maxlength="120" placeholder="Optional"></label>
+    </div>
+    <div class="form-actions">
+      <button type="button" class="button quiet" (click)="showHotelForm.set(false)" [disabled]="savingHotel()">Cancel</button>
+      <button type="submit" class="button primary" [disabled]="savingHotel()">{{ savingHotel() ? 'Adding…' : 'Add and select hotel' }}</button>
+    </div>
+  </form>
+}
+
+<form [formGroup]="form" (ngSubmit)="save()" novalidate aria-label="New hotel contract">
+  <section class="panel inset" aria-labelledby="agreement-heading">
+    <div class="section-heading"><h2 id="agreement-heading">Agreement details</h2>
+      @if (!showHotelForm()) {
+        <button type="button" class="button secondary small" (click)="showHotelForm.set(true)" [disabled]="loadingHotels()">+ Add hotel</button>
+      }
+    </div>
+    <div class="form-grid agreement-fields">
+      <label class="full-row">Hotel
+        <select formControlName="hotelId" required>
+          <option [ngValue]="0" disabled>{{ loadingHotels() ? 'Loading hotels…' : 'Select a hotel' }}</option>
+          @for (hotel of hotels(); track hotel.id) {
+            <option [ngValue]="hotel.id">{{ hotel.name }}{{ hotel.city ? ' — ' + hotel.city : '' }} (#{{ hotel.id }})</option>
+          }
+        </select>
+      </label>
+      <label>Start date <input type="date" min="1900-01-01" max="9998-12-31" formControlName="startDate" required></label>
+      <label>End date <input type="date" min="1900-01-01" max="9998-12-31" formControlName="endDate" required></label>
+      <label>Markup (%) <input inputmode="decimal" formControlName="markupPercentage" required></label>
+    </div>
+  </section>
+  <section class="panel inset" aria-labelledby="room-types-heading">
+    <div class="section-heading"><h2 id="room-types-heading">Room types</h2><button type="button" class="button secondary small" (click)="addRoomType()" [disabled]="form.controls.roomTypes.length >= 100">+ Add room type</button></div>
+    <div formArrayName="roomTypes" class="room-stack">
+      @for (room of form.controls.roomTypes.controls; track room; let i = $index) {
+        <fieldset [formGroupName]="i" class="room-card">
+          <legend>Room type {{ i + 1 }}</legend>
+          <div class="form-grid room-fields">
+            <label>Room type name <input formControlName="name" maxlength="120" required></label>
+            <label>Rate per adult per night (USD) <input formControlName="ratePerAdultPerNight" inputmode="decimal" placeholder="0.00" required></label>
+            <label>Rooms allocated <input type="number" formControlName="roomCount" min="0" max="10000" step="1" required></label>
+            <label>Maximum adults per room <input type="number" formControlName="maxAdults" min="1" max="100" step="1" required></label>
+          </div>
+          @if (form.controls.roomTypes.length > 1) {
+            <button type="button" class="button quiet small" (click)="removeRoomType(i)" [attr.aria-label]="'Remove room type ' + (i + 1)">Remove room type</button>
+          }
+        </fieldset>
+      }
+    </div>
+  </section>
+  @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
+  <div class="form-actions">
+    <a routerLink="/contracts" class="button secondary">Cancel</a>
+    <button class="button primary" type="submit" [disabled]="saving() || savingHotel() || loadingHotels()">{{ saving() ? 'Saving…' : 'Save contract' }}</button>
+  </div>
+</form>

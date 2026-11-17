@@ -1,0 +1,76 @@
+<header class="page-heading">
+  <h1>Room search</h1>
+  <p>Find rooms covered by a hotel contract and quote the full stay.</p>
+</header>
+
+<form class="panel search-panel" [formGroup]="form" (ngSubmit)="search()" novalidate aria-label="Search criteria">
+  <div class="form-grid stay-fields">
+    <label>Check-in date
+      <input type="date" formControlName="checkInDate" min="1900-01-01" max="9998-12-31" required>
+    </label>
+    <label>Number of nights
+      <input type="number" formControlName="numberOfNights" min="1" max="365" step="1" required>
+    </label>
+  </div>
+  <div class="occupancy">
+    <div class="section-heading">
+      <h2>Requested rooms</h2>
+      <button class="button secondary small" type="button" (click)="addRoom()" [disabled]="form.controls.rooms.length >= 100">+ Add room</button>
+    </div>
+    <div formArrayName="rooms" class="room-stack">
+      @for (room of form.controls.rooms.controls; track room; let i = $index) {
+        <div class="room-line" [formGroupName]="i">
+          <span class="room-label">Room {{ i + 1 }}</span>
+          <label class="inline-control" [for]="'adults-' + i">Adults
+            <input [id]="'adults-' + i" type="number" min="1" max="100" step="1" formControlName="adults" required>
+          </label>
+          @if (form.controls.rooms.length > 1) {
+            <button class="button quiet small remove-room" type="button" (click)="removeRoom(i)" [attr.aria-label]="'Remove room ' + (i + 1)">Remove</button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+  @if (error()) { <p class="notice error" role="alert">{{ error() }}</p> }
+  <div class="form-actions">
+    <button class="button primary" type="submit" [disabled]="busy()">{{ busy() ? 'Searching…' : 'Search rooms' }}</button>
+  </div>
+</form>
+
+<section class="results" aria-live="polite" aria-label="Search results">
+  @if (result(); as quote) {
+    <div class="section-heading results-heading">
+      <div>
+        <h2>Search results</h2>
+        <p>{{ quote.checkInDate | date:'MMM d, y' }} to {{ quote.checkOutDate | date:'MMM d, y' }}
+          · adults per room: {{ quoteOccupancy() }}</p>
+      </div>
+      @if (quote.results.length) { <span class="pill">{{ availableCount() }} available</span> }
+    </div>
+    @if (quote.results.length) {
+      <div class="panel table-wrap">
+        <table>
+          <thead><tr><th scope="col">Hotel</th><th scope="col">Room type</th><th scope="col">Availability</th><th scope="col" class="numeric">Total for stay</th></tr></thead>
+          <tbody>
+            @for (offer of quote.results; track offer.roomTypeId) {
+              <tr>
+                <td><strong>{{ offer.hotelName }}</strong>@if (offer.city) { <small>{{ offer.city }}</small> }</td>
+                <td>{{ offer.roomType }}<small>Contract #{{ offer.contractId }}</small></td>
+                <td>
+                  <span class="status" [class.unavailable]="offer.availability !== 'AVAILABLE'">{{ offer.availability === 'AVAILABLE' ? 'Available' : 'Not available' }}</span>
+                  @for (reason of offer.reasons; track reason) { <small>{{ reasonText[reason] }}</small> }
+                </td>
+                <td class="numeric price">
+                  @if (offer.totalPrice !== null) { {{ offer.currency }} {{ offer.totalPrice }} }
+                  @else { <span aria-label="No quote">—</span> }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <div class="panel empty"><strong>No contracts cover these dates.</strong><p>Try another check-in date or a shorter stay.</p></div>
+    }
+  }
+</section>
